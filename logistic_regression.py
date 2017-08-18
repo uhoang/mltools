@@ -75,3 +75,6 @@ x2 = -theta[0]/theta[2] - theta[1]/theta[2] * x1
 plt.plot(x1, x2, '-r', label = 'Regression line')
 
 plt.legend(loc = 'upper right')
+
+
+
