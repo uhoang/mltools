@@ -94,6 +94,7 @@ est_y_1000 = local_weighted_linear_regression(x, y, bw = 1000)
 %matplotlib
 import matplotlib.pyplot as plt 
 
+# plot raw data and smooth curves for different bandwidth size
 plt.scatter(x, y, label = 'Raw data')
 plt.plot(x, est_y_1, '-r', label = 'tau = 1')
 plt.plot(x, est_y_5, '--b', label = 'tau = 5')
@@ -103,3 +104,71 @@ plt.plot(x, est_y_1000, ':k', label = 'tau = 1000')
 plt.plot(x, est_lin_y, '--y', label = 'linear regression')
 
 plt.legend(loc = 'upper right')
+
+def squared_distance(f1, f2):
+  d = np.sum((f1[:, np.newaxis, :] - f2[np.newaxis, :, :]) ** 2, axis = -1)
+  return d
+
+def functional_regression(f, newf, k = 3):
+  n = newf.shape[0]
+  d = np.sum(wavelength < 1200)
+  f_right = f[:, wavelength >= 1300]
+  f_left = f[:, wavelength < 1200]
+  newf_right = newf[:, wavelength >= 1300]
+  frdist = sqaured_distance(f_right, newf_right)
+  nearest = np.argsort(frdist, axis = 0)[0:k, :]
+  frdist /= np.max(frdist, axis = 0)
+  frdist = 1 - frdist
+  frdist[frdist < 0] = 0
+
+  est_f_left = np.zeros((n, d))
+  for i in range(n):
+    nearest_idx = nearest[:, i]
+    w = frdist[nearest_idx, i]
+    w /= np.sum(w)
+    # print(w)
+    est_f_left[i, :] = np.sum(f_left[nearest_idx, :] * w[:, np.newaxis], axis = 0)
+
+  return est_f_left
+
+def average_error(outcome, pred):
+  error = np.mean(np.sum((outcome - pred) ** 2, axis = 1))
+  return error
+
+# get the wavelength interval
+wavelength = X.columns.values.astype(float)
+# label the DataFrame index
+X.index.name = 'key'
+
+m = len(wavelength)
+# apply local_weightd_linear_regression to each row in training dataset
+# %timeit smooth_curves = X.groupby('key').apply(lambda x: local_weighted_linear_regression(wavelength, x.values.reshape((m, ))))
+smooth_curves = X.groupby('key').apply(lambda x: local_weighted_linear_regression(wavelength, x.values.reshape((m, ))))
+
+# convert series of arrays into 2D numpy array
+s = np.array(smooth_curves.tolist())
+
+estimated_f_left = functional_regression(s, s)
+
+avg_train_error = average_error(s[:, wavelength < 1200], estimated_f_left)
+print('Average train error:%f' % avg_train_error)
+
+newX = pd.read_csv('http://cs229.stanford.edu/ps/ps1/quasar_test.csv')
+
+newX.index.name = 'key'
+# a single header row corresponds integral wavelengths in the interval [1150, 1600]
+wavelength = newX.columns.values.astype(float)
+n = newX.shape[1]
+
+# find a smooth curve for each spectrum in a test dataset
+new_smooth_spectra = newX.groupby('key').apply(lambda x: local_weighted_linear_regression(wavelength, x.values.reshape((n, ))))
+
+# convert a pandas series of array to 2-D numpy array
+news = np.array(new_smooth_spectra.tolist())
+
+# perform functional regression on the test set
+est_f_left_test = functional_regression(s, news)
+
+avg_test_error = average_error(news[:, wavelength < 1200], est_f_left_test)
+print('Average test error:%f' % avg_test_error)
+# np.mean(squared_distance(est_f_left_test, news[:, wavelength < 1200]).diagonal())
