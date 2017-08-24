@@ -1,5 +1,9 @@
 import pandas as pd 
 import numpy as np
+import os
+import glob
+import re
+from settings import *
 
 def convert_sparse_to_full(X, label_idx = None):
   '''Convert a sparse matrix to a full matrix
@@ -90,27 +94,76 @@ def predict(newX, prob_word_neg, prob_word_pos, prob_class):
   pred[ll_pos > ll_neg] = 1
   return pred
 
-# read the training set, skip the first two rows, separate columns by spaces
-train = pd.read_table('spam_data/MATRIX.TRAIN',
-                      skiprows = 2,
-                      sep = '\s+')
-
-# read the test set, skip the first two rows, separate columns by spaces
-test = pd.read_table('spam_data/MATRIX.TEST',
-                      skiprows = 2,
-                      sep = '\s+')
-
-# convert sparse matrix to full matrix and return label for the training set
-train_matrix, train_label = convert_sparse_to_full(train, label_idx = 0)
-
-# convert a sparse matrix to full matrix and return label for the test set
-test_matrix, test_label = convert_sparse_to_full(test, label_idx = 0)
-
-# estimate prob. of words for each classes
-phi_neg, phi_pos, prob_class = naive_bayes(train_matrix, label)  
-
-# predict classes for test cases
-test_preds = predict(test_matrix, phi_neg, phi_pos, prob_class)
-test_error = np.mean(test_preds != test_label)
-print('Test error: %f' % (test_error))
-
+if __name__ == '__main__':
+  # read the training set, skip the first two rows, separate columns by spaces
+  train = pd.read_table(os.path.join(data_path, 'spam_data/MATRIX.TRAIN'),
+                        skiprows = 2,
+                        sep = '\s+')
+  
+  # read the test set, skip the first two rows, separate columns by spaces
+  test = pd.read_table(os.path.join(data_path, 'spam_data/MATRIX.TEST'),
+                        skiprows = 2,
+                        sep = '\s+')
+  
+  # convert sparse matrix to full matrix and return label for the training set
+  train_matrix, train_label = convert_sparse_to_full(train, label_idx = 0)
+  
+  # convert a sparse matrix to full matrix and return label for the test set
+  test_matrix, test_label = convert_sparse_to_full(test, label_idx = 0)
+  
+  # estimate prob. of words for each classes
+  phi_neg, phi_pos, prob_class = naive_bayes(train_matrix, train_label)  
+  
+  # predict classes for test cases
+  test_preds = predict(test_matrix, phi_neg, phi_pos, prob_class)
+  test_error = np.mean(test_preds != test_label)
+  print('Test error: %f' % (test_error))
+  
+  # Look at how indicative token i is for the SPAM class
+  # by looking at log(p(x_j = 1|y = 1)/p(x_j = 1|y = 0))
+  indicative = np.log(phi_pos) - np.log(phi_neg)
+  
+  token_list = pd.read_table(os.path.join(data_path, 'spam_data/TOKENS_LIST'), 
+                            header = None, 
+                            sep = '\s+',
+                            names = ['id', 'word'])
+  
+  top_5_indicative = np.argsort(-indicative)[0:5]
+  token_list.ix[ token_list['id'].isin(top_5_indicative + 1), 1]
+  
+  print('The top five most indicative words:')
+  print(token_list.iloc[top_5_indicative, 1])
+  
+  train_file_names = []
+  
+  data_path_obj = glob.iglob(os.path.join(data_path, 'spam_data/MATRIX.TRAIN.*'), recursive = True)
+  
+  for filename in data_path_obj:
+    train_file_names.append(filename)
+  
+  # train_file_names = ! ls spam_data | grep MATRIX.TRAIN.[0-9]*
+  # train_file_names = [os.path.join('spam_data', x) for x in train_file_names]
+  # test_file_names = ! ls spam_data | grep MATRIX.TEST.[0-9]*
+  
+  test_error_list = np.zeros(len(train_file_names))
+  for i in range(len(train_file_names)):
+    print('Load', train_file_names[i])
+    temp_train = pd.read_table(train_file_names[i], 
+                              skiprows = 2,
+                              sep = '\s+')
+    temp_x, temp_label = convert_sparse_to_full(temp_train, label_idx = 0) 
+    # print(temp_train.head())
+    phi_neg, phi_pos, prob_class = naive_bayes(temp_x, temp_label)
+    temp_test_preds = predict(test_matrix, phi_neg, phi_pos, prob_class)
+    temp_test_error = np.mean(temp_test_preds != test_label)
+    test_error_list[i] = temp_test_error
+  
+  
+  sizes = np.array([re.sub('^.*spam_data/MATRIX\.TRAIN\.', '', x) for x in train_file_names]).astype('int64')
+  
+  import matplotlib.pyplot as plt 
+  # %matplotlib
+  
+  
+  plt.scatter(sizes[np.argsort(sizes)], test_error_list[np.argsort(sizes)])
+  plt.plot(sizes[np.argsort(sizes)], test_error_list[np.argsort(sizes)])

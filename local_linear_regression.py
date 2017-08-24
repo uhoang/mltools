@@ -57,50 +57,6 @@ def local_linear_regression_loop(x, y, newx = None, bw = 5):
 
   return est
 
-# load train dataset
-train = pd.read_csv('http://cs229.stanford.edu/ps/ps1/quasar_train.csv')
-
-# a single header row corresponds integral wavelengths in the interval [1150, 1600]
-wavelength = train.columns.values.astype(float)
-
-# extract the first set of relative flux spectrum for each given wavelength
-y = train.loc[0, :].values 
-m = train.shape[1]
-
-# create an input matrix with a column of 1 for an intercept and wavelength values
-X = np.hstack([np.ones((m, 1)), wavelength.reshape(m, 1)])
-
-# fit linear regression to relative flux spectrum
-theta = np.dot(np.linalg.inv(np.dot(X.T, X)), np.dot(X.T, y.reshape(m ,1)))
-est_lin_y = np.dot(X, theta)
-
-# load line-by-line profiling with %lprun
-%load_ext line_profiler 
-
-%lprun -f local_linear_regression_loop local_linear_regression_loop(X, y, bw = 1)
-%lprun -f local_linear_regression local_linear_regression(X, y, bw = 1)
-
-# fit a smooth curve to relative flux spectrum for given wavelength
-est_y_1 = local_linear_regression(X, y, bw  = 1) 
-est_y_5 = local_linear_regression(X, y, bw = 5) 
-est_y_10 = local_linear_regression(X, y, bw = 10) 
-est_y_100 = local_linear_regression(X, y, bw = 100) 
-est_y_1000 = local_linear_regression(X, y, bw = 1000) 
-
-%matplotlib
-import matplotlib.pyplot as plt 
-
-# plot raw data and smooth curves for different bandwidth size
-plt.scatter(wavelength, y, label = 'Raw data')
-plt.plot(wavelength, est_y_1, '-r', label = 'tau = 1')
-plt.plot(wavelength, est_y_5, '--b', label = 'tau = 5')
-plt.plot(wavelength, est_y_10, '-.g', label = 'tau = 10')
-plt.plot(wavelength, est_y_100, ':c', label = 'tau = 100')
-plt.plot(wavelength, est_y_1000, ':k', label = 'tau = 1000')
-plt.plot(wavelength, est_lin_y, '--y', label = 'linear regression')
-
-plt.legend(loc = 'upper right')
-
 def squared_distance(f1, f2):
   d = np.sum((f1[:, np.newaxis, :] - f2[np.newaxis, :, :]) ** 2, axis = -1)
   return d
@@ -132,35 +88,83 @@ def average_error(outcome, pred):
   error = np.mean(np.sum((outcome - pred) ** 2, axis = 1))
   return error
 
-# label the DataFrame index
-train.index.name = 'key'
 
-# apply local linear regression to each set of training examples
-# %timeit smooth_curves = X.groupby('key').apply(lambda x: local_linear_regression(wavelength, x.values.reshape((m, ))))
-smooth_curves = train.groupby('key').apply(lambda x: local_linear_regression(X, x.values.reshape((m, ))))
+if __name__ == '__main__':
 
-# convert series of arrays into 2D numpy array
-s = np.array(smooth_curves.tolist())
-
-estimated_f_left = functional_regression(s, s)
-
-avg_train_error = average_error(s[:, wavelength < 1200], estimated_f_left)
-print('Average train error:%f' % avg_train_error)
-
-test = pd.read_csv('http://cs229.stanford.edu/ps/ps1/quasar_test.csv')
-
-test.index.name = 'key'
-test_smooth_curves = test.groupby('key').apply(lambda x: local_linear_regression(X, x.values.reshape((m, ))))
-
-# convert a pandas series of array to 2-D numpy array
-news = np.array(test_smooth_curves.tolist())
-
-# perform functional regression on the test set
-est_f_left_test = functional_regression(s, news)
-
-avg_test_error = average_error(news[:, wavelength < 1200], est_f_left_test)
-print('Average test error:%f' % avg_test_error)
-# np.mean(squared_distance(est_f_left_test, news[:, wavelength < 1200]).diagonal())
-
-plt.plot(wavelength, news[6, :])
-plt.plot(wavelength[wavelength < 1200], est_f_left_test[6, :], '-r')
+  # load train dataset
+  train = pd.read_csv('http://cs229.stanford.edu/ps/ps1/quasar_train.csv')
+  
+  # a single header row corresponds integral wavelengths in the interval [1150, 1600]
+  wavelength = train.columns.values.astype(float)
+  
+  # extract the first set of relative flux spectrum for each given wavelength
+  y = train.loc[0, :].values 
+  m = train.shape[1]
+  
+  # create an input matrix with a column of 1 for an intercept and wavelength values
+  X = np.hstack([np.ones((m, 1)), wavelength.reshape(m, 1)])
+  
+  # fit linear regression to relative flux spectrum
+  theta = np.dot(np.linalg.inv(np.dot(X.T, X)), np.dot(X.T, y.reshape(m ,1)))
+  est_lin_y = np.dot(X, theta)
+  
+  # # load line-by-line profiling with %lprun
+  # %load_ext line_profiler 
+  
+  # %lprun -f local_linear_regression_loop local_linear_regression_loop(X, y, bw = 1)
+  # %lprun -f local_linear_regression local_linear_regression(X, y, bw = 1)
+  
+  # fit a smooth curve to relative flux spectrum for given wavelength
+  est_y_1 = local_linear_regression(X, y, bw  = 1) 
+  est_y_5 = local_linear_regression(X, y, bw = 5) 
+  est_y_10 = local_linear_regression(X, y, bw = 10) 
+  est_y_100 = local_linear_regression(X, y, bw = 100) 
+  est_y_1000 = local_linear_regression(X, y, bw = 1000) 
+  
+  # %matplotlib
+  import matplotlib.pyplot as plt 
+  
+  # plot raw data and smooth curves for different bandwidth size
+  plt.scatter(wavelength, y, label = 'Raw data')
+  plt.plot(wavelength, est_y_1, '-r', label = 'tau = 1')
+  plt.plot(wavelength, est_y_5, '--b', label = 'tau = 5')
+  plt.plot(wavelength, est_y_10, '-.g', label = 'tau = 10')
+  plt.plot(wavelength, est_y_100, ':c', label = 'tau = 100')
+  plt.plot(wavelength, est_y_1000, ':k', label = 'tau = 1000')
+  plt.plot(wavelength, est_lin_y, '--y', label = 'linear regression')
+  
+  plt.legend(loc = 'upper right')
+  
+  
+  # label the DataFrame index
+  train.index.name = 'key'
+  
+  # apply local linear regression to each set of training examples
+  # %timeit smooth_curves = X.groupby('key').apply(lambda x: local_linear_regression(wavelength, x.values.reshape((m, ))))
+  smooth_curves = train.groupby('key').apply(lambda x: local_linear_regression(X, x.values.reshape((m, ))))
+  
+  # convert series of arrays into 2D numpy array
+  s = np.array(smooth_curves.tolist())
+  
+  estimated_f_left = functional_regression(s, s)
+  
+  avg_train_error = average_error(s[:, wavelength < 1200], estimated_f_left)
+  print('Average train error:%f' % avg_train_error)
+  
+  test = pd.read_csv('http://cs229.stanford.edu/ps/ps1/quasar_test.csv')
+  
+  test.index.name = 'key'
+  test_smooth_curves = test.groupby('key').apply(lambda x: local_linear_regression(X, x.values.reshape((m, ))))
+  
+  # convert a pandas series of array to 2-D numpy array
+  news = np.array(test_smooth_curves.tolist())
+  
+  # perform functional regression on the test set
+  est_f_left_test = functional_regression(s, news)
+  
+  avg_test_error = average_error(news[:, wavelength < 1200], est_f_left_test)
+  print('Average test error:%f' % avg_test_error)
+  # np.mean(squared_distance(est_f_left_test, news[:, wavelength < 1200]).diagonal())
+  
+  plt.plot(wavelength, news[6, :])
+  plt.plot(wavelength[wavelength < 1200], est_f_left_test[6, :], '-r')
