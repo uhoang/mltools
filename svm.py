@@ -6,7 +6,6 @@ import pandas as pd
 import nb 
 import glob
 import os
-from settings import *
 
 def svm(X, y, tau = 8, num_outer_loops = 40):
   m = X.shape[0]
@@ -53,23 +52,20 @@ def predict(X, newX, alpha):
 
 if __name__ == '__main__':
   filenames = []
-  data_path_list = glob.iglob(os.path.join(data_path, 'spam_data/MATRIX.TRAIN.'))
-
-  for filename in data_path_list:
-    filenames.append(filename)
+  data_path_list = glob.glob(os.path.join(data_path, 'spam_data/MATRIX.TRAIN.*'), recursive = True)
 
   train = pd.read_table(os.path.join(data_path, 'spam_data/MATRIX.TRAIN'),
                         skiprows = 2,
                         sep = '\s+')
 
   train_matrix, train_label = nb.convert_sparse_to_full(train, label_idx = 0)
-  train_label[train_label == 0] = -1
+  train_label = 2 * train_label - 1
   
   test = pd.read_table(os.path.join(data_path, 'spam_data/MATRIX.TEST'),
                         skiprows = 2,
                         sep = '\s+')
 
   test_matrix, test_label = nb.convert_sparse_to_full(test, label_idx = 0)
-  test_label[test_label == 0] = -1
+  test_label = 2 * test_label - 1
 
   est_alpha = svm(train_matrix, train_label)
