@@ -1,3 +1,3 @@
 # mltools
 
-Collection of machine learning algorithm implemented in python from CS229
+Collection of basic home-made ML algorithms in Python from CS229
