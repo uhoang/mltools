@@ -88,7 +88,6 @@ def average_error(outcome, pred):
   error = np.mean(np.sum((outcome - pred) ** 2, axis = 1))
   return error
 
-
 if __name__ == '__main__':
 
   # load train dataset
