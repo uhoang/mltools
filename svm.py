@@ -37,7 +37,6 @@ def svm(X, y, tau = 8, num_outer_loops = 40):
   avg_alpha = avg_alpha / (m * num_outer_loops)
   return avg_alpha
 
-
 def predict(Xtrain, Xtest, alpha, tau = 8):
 
   m = Xtrain.shape[0]
@@ -98,7 +97,6 @@ if __name__ == '__main__':
   
   import matplotlib.pyplot as plt 
   %matplotlib
-  
   
   plt.scatter(sizes[np.argsort(sizes)], test_error_list[np.argsort(sizes)])
   plt.plot(sizes[np.argsort(sizes)], test_error_list[np.argsort(sizes)])
