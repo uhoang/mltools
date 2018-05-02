@@ -55,7 +55,6 @@ if __name__ == '__main__':
   # convert DataFrame to numpy.array and reshape to a vector
   y = y.values.reshape((m, )) 
 
-
   theta, ll = log_regression(X, y)
 
   # %matplotlib
