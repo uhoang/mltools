@@ -164,6 +164,5 @@ if __name__ == '__main__':
   import matplotlib.pyplot as plt 
   # %matplotlib
   
-  
   plt.scatter(sizes[np.argsort(sizes)], test_error_list[np.argsort(sizes)])
   plt.plot(sizes[np.argsort(sizes)], test_error_list[np.argsort(sizes)])
